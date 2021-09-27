@@ -1,0 +1,8 @@
+/*.sh
+/*.bin
+/*.code-workspace
+/xdkbuild
+
+/src/*.o
+/.vscode
+
