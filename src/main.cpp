@@ -43,6 +43,7 @@ int main(int argc, char* argv[]) {
 	memset(buf, 0, FSP_MAXSPACE);
 
 	sockaddr_in cliAddr;
+	memset((PBYTE)&cliAddr, 0, sizeof(cliAddr));
 	n = recvfrom(srvSock, buf, FSP_MAXSPACE, 0, (sockaddr*)&cliAddr, (socklen_t*)&len);
 
 	return ERROR_NONE;
