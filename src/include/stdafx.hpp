@@ -6,6 +6,11 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <pthread.h>
+#include <memory.h>
 
-// lib
+using namespace std;
+
+// internal
 #include "types.hpp"
+#include "utils.hpp"
