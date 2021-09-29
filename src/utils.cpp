@@ -13,3 +13,24 @@ ulong Utils::AddressToLong(const PCHAR addr) {
                 }
     return 0;
 }
+
+BYTE Utils::CalcClientToServerChecksum(PBYTE data, UINT32 size) {
+    // null checksum
+    *(PBYTE)(data + OFFS_CKSM) = 0;
+    BYTE cksm = 0;
+    for(int i = 0; i < size; i++)
+        cksm += data[i];
+    cksm += size;
+    cksm += cksm >> 8;
+    return cksm;
+}
+
+BYTE Utils::CalcServerToClientChecksum(PBYTE data, UINT32 size) {
+    // set checksum to the size
+    *(PBYTE)(data + OFFS_CKSM) = (BYTE)size;
+    BYTE cksm = -size;
+    for(int i = 0; i < size; i++)
+        cksm += data[i];
+    cksm += cksm >> 8;
+    return cksm;
+}
