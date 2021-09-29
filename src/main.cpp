@@ -1,38 +1,12 @@
 #include "stdafx.hpp"
 
-static void* ReceiveClient(void* vpargs) {
-	PRECEIVE_CLIENT_ARGS pargs = (PRECEIVE_CLIENT_ARGS)vpargs;
-
-	printf("%i\n", pargs->sock);
-
-	// receive variables
-	int len, n;
-	BYTE buf[FSP_MAXSPACE];
-	memset(buf, 0, FSP_MAXSPACE);
-
-	sockaddr_in cliAddr;
-	memset((PBYTE)&cliAddr, 0, sizeof(cliAddr));
-	if((n = recvfrom(pargs->sock, buf, FSP_MAXSPACE, 0, (sockaddr*)&cliAddr, (socklen_t*)&len)) == -1) {
-		PFSP_HDR phdr = (PFSP_HDR)buf;
-		PBYTE pbFspData = buf + sizeof(FSP_HDR);
-		PBYTE pbFspExtra = buf + sizeof(FSP_HDR) + phdr->length;
-		// create a copy since this will be nulled when it's checked
-		BYTE storCksm = phdr->checksum;
-		BYTE calcCksm = Utils::CalcClientToServerChecksum(buf, sizeof(FSP_HDR) + phdr->length);
-		if(storCksm != calcCksm)
-			printf("Checksum mismatch!\n");
-	}
-
-	return NULL;
-}
-
 int main(int argc, char* argv[]) {
 	printf("FSPD-Plus-Plus server started on %s:%i...\n", SERVER_ADDR, SERVER_PORT);
 
 	int srvSock;
 	int opt = TRUE;
 	sockaddr_in srvAddr;
-	memset((PBYTE)&srvAddr, 0, sizeof(srvAddr));
+	memset(&srvAddr, 0, sizeof(srvAddr));
 	srvAddr.sin_family = AF_INET;
 	srvAddr.sin_port = htons(SERVER_PORT);
 	srvAddr.sin_addr.s_addr = Utils::AddressToLong((const PCHAR)SERVER_ADDR);
@@ -65,28 +39,32 @@ int main(int argc, char* argv[]) {
 		return ERROR_SOCKET_BIND_FAILED;
 	}
 
-	printf("%i\n", srvSock);
+	// receive in a loop on a single thread...
+	// terrible for multiple clients but oh well :/
+	while(true) {
+		// receive variables
+		int len, n;
+		BYTE buf[FSP_MAXSPACE];
+		memset(buf, 0, FSP_MAXSPACE);
 
-	pthread_t t;
-	RECEIVE_CLIENT_ARGS args;
-	args.sock = srvSock;
-	int err = pthread_create(&t, NULL, &ReceiveClient, &args);
-	if(err) {
-		perror("thread creation failed!\n");
-		return ERROR_THREAD_CREATE_FAILED;
+		sockaddr_in cliAddr;
+		memset(&cliAddr, 0, sizeof(cliAddr));
+		if((n = recvfrom(srvSock, buf, FSP_MAXSPACE, 0, (sockaddr*)&cliAddr, (socklen_t*)&len)) == -1) {
+			perror("recvfrom failed!\n");
+			return ERROR_RECEIVE_FAILED;
+		}
+
+		// check bounds
+		if(!(n > 0 && n <= FSP_MAXSPACE)) {
+			perror("receive size out of bounds!\n");
+			return ERROR_SIZE_OUT_OF_BOUNDS;
+		}
+		
+		// parse the packet
+		FSPRequest req = FSPRequest::Parse(buf, n);
+
+		// @todo actually test this?!
 	}
-
-	err = pthread_detach(t);
-	if(err) {
-		perror("thread detech failed!\n");
-		return ERROR_THREAD_DETECH_FAILED;
-	}
-
-	/* err = pthread_join(t, NULL);
-	if(err) {
-		perror("thread join failed!\n");
-		return ERROR_THREAD_JOIN_FAILED;
-	} */
 
 	return ERROR_NONE;
 }

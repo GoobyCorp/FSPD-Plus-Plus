@@ -1,5 +1,6 @@
 #ifndef _TYPES_HPP
 #define _TYPES_HPP
+typedef char* PCHAR;
 typedef unsigned char  BYTE, uint8, u8, UINT8;
 typedef unsigned short uint16, u16, ushort, USHORT, UINT16;
 typedef unsigned int   uint32, u32, UINT32;
@@ -13,9 +14,7 @@ enum {
 	ERROR_SOCKET_BIND_FAILED,
 	ERROR_RECEIVE_FAILED,
 	ERROR_SEND_FAILED,
-	ERROR_THREAD_CREATE_FAILED,
-	ERROR_THREAD_DETECH_FAILED,
-	ERROR_THREAD_JOIN_FAILED
+	ERROR_SIZE_OUT_OF_BOUNDS
 };
 
 enum FSP_OFFSET {
@@ -70,6 +69,11 @@ struct FSP_HDR {
 	UINT32      position;
 };
 
+struct FSP_PKT {
+	FSP_HDR header;
+	BYTE    data[];
+};
+
 // pointers
 typedef char*   PCHAR;
 typedef BYTE*   PBYTE;
@@ -77,6 +81,7 @@ typedef uint16* PUSHORT;
 typedef ulong*  PULONG;
 typedef RECEIVE_CLIENT_ARGS* PRECEIVE_CLIENT_ARGS;
 typedef FSP_HDR* PFSP_HDR;
+typedef FSP_PKT* PFSP_PKT;
 
 // constants
 #define SERVER_ADDR "0.0.0.0"
