@@ -41,6 +41,7 @@ int main(int argc, char* argv[]) {
 
 	// receive in a loop on a single thread...
 	// terrible for multiple clients but oh well :/
+	printf("Waiting on client...\n");
 	while(true) {
 		// receive variables
 		int len, n;
@@ -59,6 +60,9 @@ int main(int argc, char* argv[]) {
 			perror("receive size out of bounds!\n");
 			return ERROR_SIZE_OUT_OF_BOUNDS;
 		}
+
+		// print client info
+		printf("%s\n", Utils::LongToAddress(cliAddr.sin_addr.s_addr));
 		
 		// parse the packet
 		FSPRequest req = FSPRequest::Parse(buf, n);

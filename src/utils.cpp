@@ -14,6 +14,12 @@ ulong Utils::AddressToLong(const PCHAR addr) {
     return 0;
 }
 
+PCHAR Utils::LongToAddress(ulong addr) {
+    char addrStr[16] = { 0 };
+    sprintf(addrStr, "%i.%i.%i.%i", *(PBYTE)&addr + 3, *(PBYTE)&addr + 2, *(PBYTE)&addr + 1, *(PBYTE)&addr);
+    return addrStr;
+}
+
 BYTE Utils::CalcClientToServerChecksum(PBYTE data, UINT32 size) {
     // null checksum
     *(PBYTE)(data + OFFS_CKSM) = 0;
