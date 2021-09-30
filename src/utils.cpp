@@ -51,6 +51,21 @@ BYTE Utils::CalcServerToClientChecksum(PBYTE data, UINT32 size) {
     return Utils::ComputeChecksum(data, size, 0);
 }
 
+UINT32 Utils::CalcPadSize(UINT32 size, UINT32 boundary) {
+    if(size == boundary)
+        return 0;
+    else
+        return (boundary - size % boundary);
+}
+
+BOOL Utils::IsDir(PCHAR path) {
+    return fs::is_directory(path);
+}
+
+BOOL Utils::IsFile(PCHAR path) {
+    return fs::is_regular_file(path);
+}
+
 void Utils::SwapFSPHeaderEndian(PFSP_HDR pHdr) {
     es16(pHdr->key);
     es16(pHdr->sequence);

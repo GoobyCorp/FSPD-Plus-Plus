@@ -6,10 +6,10 @@
 #define es32(x) x = bswap32(x)
 #define es64(x) x = bswap64(x)
 
-typedef char* PCHAR;
+typedef char           CHAR;
 typedef unsigned char  BYTE, uint8, u8, UINT8;
 typedef unsigned short uint16, u16, ushort, USHORT, UINT16;
-typedef unsigned int   uint32, u32, UINT32;
+typedef unsigned int   uint32, u32, UINT32, BOOL;
 typedef unsigned long  ulong, ULONG;
 
 // enums
@@ -54,7 +54,7 @@ enum FSP_COMMAND:BYTE {
 	CC_TEST      = 0x81
 };
 
-enum RDIRENT_TYPE {
+enum RDIRENT_TYPE:BYTE {
 	RDTYPE_END  = 0x00,
 	RDTYPE_FILE = 0x01,
 	RDTYPE_DIR  = 0x02,
@@ -81,13 +81,13 @@ struct FSP_PKT {
 };
 
 // pointers
-typedef char*   PCHAR;
-typedef BYTE*   PBYTE;
-typedef uint16* PUSHORT;
-typedef ulong*  PULONG;
+typedef CHAR*       PCHAR;
+typedef BYTE*       PBYTE;
+typedef UINT16*     PUSHORT;
+typedef ULONG*      PULONG;
 typedef RECEIVE_CLIENT_ARGS* PRECEIVE_CLIENT_ARGS;
-typedef FSP_HDR* PFSP_HDR;
-typedef FSP_PKT* PFSP_PKT;
+typedef FSP_HDR*    PFSP_HDR;
+typedef FSP_PKT*    PFSP_PKT;
 
 // constants
 #define SERVER_ADDR "192.168.1.19"

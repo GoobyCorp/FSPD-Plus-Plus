@@ -1,5 +1,20 @@
 #include "stdafx.hpp"
 
+void HandleGetDir(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen, FSPRequest req) {
+
+}
+
+void HandleBye(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen, FSPRequest req) {
+	int n;
+	FSPRequest sReq = FSPRequest::Create(CC_BYE, NULL, 0, 0, req.pHdr->sequence);
+	PBYTE sBuf = (PBYTE)malloc(FSP_MAXSPACE);
+	UINT32 sSize = sReq.Pack(sBuf);
+	realloc(sBuf, sSize);
+	if((n = sendto(srvSock, sBuf, sSize, 0, cliAddr, cliAddrLen)) == -1) {
+
+	}
+}
+
 int main(int argc, char* argv[]) {
 	printf("FSPD-Plus-Plus server started on %s:%i...\n", SERVER_ADDR, SERVER_PORT);
 
@@ -45,12 +60,12 @@ int main(int argc, char* argv[]) {
 	while(true) {
 		// receive variables
 		int len, n;
-		BYTE buf[FSP_MAXSPACE];
-		memset(buf, 0, FSP_MAXSPACE);
+		BYTE recvBuf[FSP_MAXSPACE];
+		memset(recvBuf, 0, FSP_MAXSPACE);
 
 		sockaddr_in cliAddr;
 		memset(&cliAddr, 0, sizeof(cliAddr));
-		if((n = recvfrom(srvSock, buf, FSP_MAXSPACE, 0, (sockaddr*)&cliAddr, (socklen_t*)&len)) == -1) {
+		if((n = recvfrom(srvSock, recvBuf, FSP_MAXSPACE, 0, (sockaddr*)&cliAddr, (socklen_t*)&len)) == -1) {
 			perror("recvfrom failed!\n");
 			return ERROR_RECEIVE_FAILED;
 		}
@@ -67,12 +82,44 @@ int main(int argc, char* argv[]) {
 		printf("%s:%i\n", addrStr, ntohs(cliAddr.sin_port));
 		
 		// parse the packet
-		FSPRequest req = FSPRequest::Parse(buf, n);
+		FSPRequest req = FSPRequest::Parse(recvBuf, n);
 
 		printf("Command: %02X\n", req.pHdr->command);
-		Utils::PrintHex(buf, n);
+		Utils::PrintHex(recvBuf, n);
 
-		// @todo actually test this?!
+		// check password
+		switch(req.pHdr->command) {
+			case CC_GET_DIR:
+			case CC_GET_FILE:
+			case CC_STAT:
+			case CC_DEL_FILE:
+			case CC_INSTALL: {
+				// check the password
+				if(strcmp(req.pcPassword, Globals::FSP_PASSWORD) != 0) {
+					printf("Invalid password attempted: \"%s\"\n", req.pcPassword);
+					continue;
+				}
+				break;
+			}
+			default: {
+				break;
+			}
+		}
+
+		// handle commands
+		switch(req.pHdr->command) {
+			case CC_GET_DIR: {
+				HandleGetDir(srvSock, (sockaddr*)&cliAddr, len, req);
+				break;
+			}
+			case CC_BYE: {
+				HandleBye(srvSock, (sockaddr*)&cliAddr, len, req);
+				break;
+			}
+			default: {
+				break;
+			}
+		}
 	}
 
 	return ERROR_NONE;

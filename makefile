@@ -1,7 +1,7 @@
 TARGET    = fspdplusplus
 SRCDIR    = src
 CXX       = g++
-CXXFLAGS  = -Isrc/include/ -g3 -O3 -DNDEBUG -Wall -Wextra -std=c++2a
+CXXFLAGS  = -Isrc/include/ -lstdc++fs -g3 -O3 -DNDEBUG -Wall -Wextra -std=c++2a
 LDFLAGS   = 
 SRCS      = $(foreach dir,$(SRCDIR), $(wildcard $(dir)/*.cpp))
 OBJS      = $(SRCS:.cpp=.o)
