@@ -5,57 +5,77 @@ RDIRENT::RDIRENT() {
 }
 
 RDIRENT::~RDIRENT() {
-    
+    if(this->pcFileName != NULL)
+        free(this->pcFileName);
 }
 
 UINT32 RDIRENT::GetSize() {
-    BYTE pbOut[PATH_MAX];
-    return this->Pack(pbOut);
+    UINT32 size;
+    PBYTE pbOut = this->Pack(&size);
+    free(pbOut);  // quite a waste but whatever...
+    return size;
 }
 
-UINT32 RDIRENT::Pack(PBYTE pbOut) {
+PBYTE RDIRENT::Pack(PUINT32 pcbOut) {
     UINT32 size = 0;
-    memcpy(pbOut, &this->FileTime, sizeof(UINT32));
-    pbOut += sizeof(UINT32);
-    memcpy(pbOut, &this->FileSize, sizeof(UINT32));
-    pbOut += sizeof(UINT32);
-    memcpy(pbOut, &this->Type, sizeof(BYTE));
-    pbOut += sizeof(BYTE);
+    PBYTE pbOut = (PBYTE)calloc(1, FSP_MAXSPACE);
+    PBYTE pbTmp = pbOut;
+    memcpy(pbTmp, &this->pHdr->FileTime, sizeof(UINT32));
+    pbTmp += sizeof(UINT32);
+    memcpy(pbTmp, &this->pHdr->FileSize, sizeof(UINT32));
+    pbTmp += sizeof(UINT32);
+    memcpy(pbTmp, &this->pHdr->Type, sizeof(BYTE));
+    pbTmp += sizeof(BYTE);
     size += (sizeof(UINT32) * 2) + sizeof(BYTE);
-    memcpy(pbOut, this->pcFileName, strlen(this->pcFileName));
-    pbOut += strlen(this->pcFileName);
-    size += strlen(this->pcFileName);
+    Utils::SwapRDIRENTHeaderEndian((PRDIRENT_HDR)pbOut); // to big endian
+    if(this->pcFileName != NULL) {
+        strcpy((PCHAR)pbTmp, this->pcFileName);
+        pbTmp += strlen(this->pcFileName) + 1;
+        size += strlen(this->pcFileName) + 1;
+    }
     UINT32 padSize = Utils::CalcPadSize(size, 4);
-    memset(pbOut, 0, padSize);
+    memset(pbTmp, 0, padSize);
     size += padSize;
-    return size;
+    *pcbOut = size;
+    pbOut = (PBYTE)realloc(pbOut, size);
+    return pbOut;
 }
 
 RDIRENT RDIRENT::Create(PCHAR path) {
     fs::path p(path);
     RDIRENT ent;
-    ent.FileTime = 1592534256;
+    RDIRENT_HDR hdr;
+    hdr.FileTime = 1592534256;
     if(fs::is_regular_file(p)) {
-        ent.FileSize = fs::file_size(p);
-        ent.Type = RDTYPE_FILE;
-        ent.pcFileName = (PCHAR)p.filename().c_str();
+        hdr.FileSize = fs::file_size(p);
+        hdr.Type = RDTYPE_FILE;
+        PCHAR fName = (PCHAR)p.filename().c_str();
+        ent.pcFileName = (PCHAR)malloc(strlen(fName) + 1);
+        strcpy(ent.pcFileName, fName);
     } else if(fs::is_directory(p)) {
-        ent.FileSize = 0;
-        ent.Type = RDTYPE_DIR;
-        ent.pcFileName = (PCHAR)p.filename().c_str();
+        hdr.FileSize = 0;
+        hdr.Type = RDTYPE_DIR;
+        PCHAR fName = (PCHAR)p.filename().c_str();
+        ent.pcFileName = (PCHAR)malloc(strlen(fName) + 1);
+        strcpy(ent.pcFileName, fName);
     }
+    ent.pHdr = &hdr;
     return ent;
 }
 
 RDIRENT RDIRENT::CreateSkip() {
     RDIRENT ent;
-    ent.Type = RDTYPE_SKIP;
+    RDIRENT_HDR hdr;
+    hdr.Type = RDTYPE_SKIP;
+    ent.pHdr = &hdr;
     return ent;
 }
 
 RDIRENT RDIRENT::CreateEnd() {
     RDIRENT ent;
-    ent.Type = RDTYPE_END;
+    RDIRENT_HDR hdr;
+    hdr.Type = RDTYPE_END;
+    ent.pHdr = &hdr;
     return ent;
 }
 
@@ -64,19 +84,29 @@ FSPRequest::FSPRequest() {
 }
 
 FSPRequest::~FSPRequest() {
-
+    if(this->pcDirectory != NULL)
+        free(this->pcDirectory);
+    if(this->pcFilename != NULL)
+        free(this->pcFilename);
+    if(this->pcPassword != NULL)
+        free(this->pcPassword);
 }
 
 UINT32 FSPRequest::GetSize() {
     return sizeof(FSP_HDR) + this->cbData + this->cbExtra;
 }
 
-UINT32 FSPRequest::Pack(PBYTE pbOut) {
+PBYTE FSPRequest::Pack(PUINT32 pcbOut) {
+    PBYTE pbOut = (PBYTE)calloc(1, FSP_MAXSPACE);
     memcpy(pbOut, this->pHdr, sizeof(FSP_HDR));
     Utils::SwapFSPHeaderEndian((PFSP_HDR)pbOut);  // to big endian
-    memcpy(pbOut + sizeof(FSP_HDR), this->pbData, this->cbData);
-    memcpy(pbOut + sizeof(FSP_HDR) + this->cbData, this->pbExtra, this->cbExtra);
-    return this->GetSize();
+    if(this->cbData > 0)
+        memcpy(pbOut + sizeof(FSP_HDR), this->pbData, this->cbData);
+    if(this->cbExtra > 0)
+        memcpy(pbOut + sizeof(FSP_HDR) + this->cbData, this->pbExtra, this->cbExtra);
+    *pcbOut = this->GetSize();
+    pbOut = (PBYTE)realloc(pbOut, *pcbOut);
+    return pbOut;
 }
 
 FSPRequest FSPRequest::Parse(PBYTE pbData, UINT32 cbData) {
@@ -99,8 +129,13 @@ FSPRequest FSPRequest::Parse(PBYTE pbData, UINT32 cbData) {
             string s((PCHAR)req.pbData, req.cbData);
             int pos;
             if((pos = s.find("\n")) < string::npos) {
-                req.pcDirectory = (PCHAR)s.substr(0, pos).c_str();
-                req.pcPassword = (PCHAR)s.substr(pos + 1).c_str();
+                PCHAR dName = (PCHAR)s.substr(0, pos).c_str();
+                req.pcDirectory = (PCHAR)calloc(1, strlen(dName) + 1);
+                strcpy(req.pcDirectory, dName);
+                
+                PCHAR pWord = (PCHAR)s.substr(pos + 1).c_str();
+                req.pcPassword = (PCHAR)calloc(1, strlen(pWord) + 1);
+                strcpy(req.pcPassword, pWord);
             }
             break;
         }
@@ -111,8 +146,13 @@ FSPRequest FSPRequest::Parse(PBYTE pbData, UINT32 cbData) {
             string s((PCHAR)req.pbData, req.cbData);
             int pos;
             if((pos = s.find("\n")) < string::npos) {
-                req.pcFilename = (PCHAR)s.substr(0, pos).c_str();
-                req.pcPassword = (PCHAR)s.substr(pos + 1).c_str();
+                PCHAR fName = (PCHAR)s.substr(0, pos).c_str();
+                req.pcFilename = (PCHAR)calloc(1, strlen(fName) + 1);
+                strcpy(req.pcFilename, fName);
+                
+                PCHAR pWord = (PCHAR)s.substr(pos + 1).c_str();
+                req.pcPassword = (PCHAR)calloc(1, strlen(pWord) + 1);
+                strcpy(req.pcPassword, pWord);
             }
             break;
         }
@@ -146,11 +186,10 @@ FSPRequest FSPRequest::Create(FSP_COMMAND cmd, PBYTE pbData, USHORT cbData, USHO
 
     // pack the data so we can calculate the checksum
     // probably a shitty way to do it :'(
-    PBYTE packed = (PBYTE)malloc(FSP_MAXSPACE);
-    USHORT cbOut = req.Pack(packed);
-    packed = (PBYTE)realloc(packed, cbOut);
-    hdr.checksum = Utils::CalcServerToClientChecksum(packed, cbOut);
-    free(packed);
+    UINT32 cbOut;
+    PBYTE pbOut = req.Pack(&cbOut);
+    hdr.checksum = Utils::CalcServerToClientChecksum(pbOut, cbOut);
+    free(pbOut);
 
     return req;
 }

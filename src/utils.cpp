@@ -72,3 +72,8 @@ void Utils::SwapFSPHeaderEndian(PFSP_HDR pHdr) {
     es16(pHdr->length);
     es32(pHdr->position);
 }
+
+void Utils::SwapRDIRENTHeaderEndian(PRDIRENT_HDR pHdr) {
+    es32(pHdr->FileTime);
+    es32(pHdr->FileSize);
+}

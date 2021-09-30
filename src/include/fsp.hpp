@@ -1,15 +1,13 @@
 class RDIRENT {
     public:
-        UINT32 FileTime = 0;
-        UINT32 FileSize = 0;
+        PRDIRENT_HDR pHdr = 0;
         PCHAR pcFileName = 0;
-        RDIRENT_TYPE Type = RDTYPE_END;
 
         // functions - class
         RDIRENT();
         ~RDIRENT();
         UINT32 GetSize();
-        UINT32 Pack(PBYTE pbOut);
+        PBYTE Pack(PUINT32 pcbOut);
         // functions - static
         static RDIRENT Create(PCHAR path);
         static RDIRENT CreateSkip();
@@ -37,7 +35,7 @@ class FSPRequest {
         FSPRequest();
         ~FSPRequest();
         UINT32 GetSize();
-        UINT32 Pack(PBYTE pbOut);
+        PBYTE Pack(PUINT32 pcbOut);
         // functions - static
         static FSPRequest Parse(PBYTE pbData, UINT32 cbData);
         static FSPRequest Create(FSP_COMMAND cmd, PBYTE pbData, USHORT cbData, USHORT pos = 0, USHORT seq = 0);

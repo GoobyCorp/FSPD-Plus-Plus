@@ -1,18 +1,32 @@
 #include "stdafx.hpp"
 
 void HandleGetDir(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen, FSPRequest req) {
+	RDIRENT ent = RDIRENT::CreateEnd();
+	UINT32 sndSize0;
+	PBYTE sndBuf0 = ent.Pack(&sndSize0);
 
+	int n;
+	FSPRequest sndReq = FSPRequest::Create(CC_GET_DIR, sndBuf0, sndSize0, 0, req.pHdr->sequence);
+	UINT32 sndSize1;
+	PBYTE sndBuf1 = sndReq.Pack(&sndSize1);
+	if((n = sendto(srvSock, sndBuf1, sndSize1, 0, cliAddr, cliAddrLen)) == -1) {
+
+	}
+	Utils::PrintHex(sndBuf1, sndSize1);
+	free(sndBuf0);
+	free(sndBuf1);
 }
 
 void HandleBye(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen, FSPRequest req) {
 	int n;
-	FSPRequest sReq = FSPRequest::Create(CC_BYE, NULL, 0, 0, req.pHdr->sequence);
-	PBYTE sBuf = (PBYTE)malloc(FSP_MAXSPACE);
-	UINT32 sSize = sReq.Pack(sBuf);
-	realloc(sBuf, sSize);
-	if((n = sendto(srvSock, sBuf, sSize, 0, cliAddr, cliAddrLen)) == -1) {
+	FSPRequest sndReq = FSPRequest::Create(CC_BYE, NULL, 0, 0, req.pHdr->sequence);
+	UINT32 sndSize;
+	PBYTE sndBuf = sndReq.Pack(&sndSize);
+	if((n = sendto(srvSock, sndBuf, sndSize, 0, cliAddr, cliAddrLen)) == -1) {
 
 	}
+	Utils::PrintHex(sndBuf, sndSize);
+	free(sndBuf);
 }
 
 int main(int argc, char* argv[]) {
@@ -60,12 +74,12 @@ int main(int argc, char* argv[]) {
 	while(true) {
 		// receive variables
 		int len, n;
-		BYTE recvBuf[FSP_MAXSPACE];
-		memset(recvBuf, 0, FSP_MAXSPACE);
+		BYTE rcvBuf[FSP_MAXSPACE];
+		memset(rcvBuf, 0, FSP_MAXSPACE);
 
 		sockaddr_in cliAddr;
 		memset(&cliAddr, 0, sizeof(cliAddr));
-		if((n = recvfrom(srvSock, recvBuf, FSP_MAXSPACE, 0, (sockaddr*)&cliAddr, (socklen_t*)&len)) == -1) {
+		if((n = recvfrom(srvSock, rcvBuf, FSP_MAXSPACE, 0, (sockaddr*)&cliAddr, (socklen_t*)&len)) == -1) {
 			perror("recvfrom failed!\n");
 			return ERROR_RECEIVE_FAILED;
 		}
@@ -82,10 +96,10 @@ int main(int argc, char* argv[]) {
 		printf("%s:%i\n", addrStr, ntohs(cliAddr.sin_port));
 		
 		// parse the packet
-		FSPRequest req = FSPRequest::Parse(recvBuf, n);
+		FSPRequest req = FSPRequest::Parse(rcvBuf, n);
 
 		printf("Command: %02X\n", req.pHdr->command);
-		Utils::PrintHex(recvBuf, n);
+		Utils::PrintHex(rcvBuf, n);
 
 		// check password
 		switch(req.pHdr->command) {

@@ -11,4 +11,5 @@ class Utils {
         static BOOL IsDir(PCHAR path);
         static BOOL IsFile(PCHAR path);
         static void SwapFSPHeaderEndian(PFSP_HDR pHdr);
+        static void SwapRDIRENTHeaderEndian(PRDIRENT_HDR pHdr);
 };

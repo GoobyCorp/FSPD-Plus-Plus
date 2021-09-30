@@ -75,19 +75,20 @@ struct FSP_HDR {
 	UINT32      position;
 };
 
-struct FSP_PKT {
-	FSP_HDR header;
-	BYTE    data[];
+struct RDIRENT_HDR {
+	UINT32       FileTime;
+	UINT32       FileSize;
+	RDIRENT_TYPE Type;
 };
 
 // pointers
-typedef CHAR*       PCHAR;
-typedef BYTE*       PBYTE;
-typedef UINT16*     PUSHORT;
-typedef ULONG*      PULONG;
-typedef RECEIVE_CLIENT_ARGS* PRECEIVE_CLIENT_ARGS;
-typedef FSP_HDR*    PFSP_HDR;
-typedef FSP_PKT*    PFSP_PKT;
+typedef CHAR*        PCHAR;
+typedef BYTE*        PBYTE;
+typedef UINT16*      PUSHORT;
+typedef UINT32*      PUINT32;
+typedef ULONG*       PULONG;
+typedef FSP_HDR*     PFSP_HDR;
+typedef RDIRENT_HDR* PRDIRENT_HDR;
 
 // constants
 #define SERVER_ADDR "192.168.1.19"
