@@ -62,10 +62,15 @@ int main(int argc, char* argv[]) {
 		}
 
 		// print client info
-		printf("%s\n", Utils::LongToAddress(cliAddr.sin_addr.s_addr));
+		char addrStr[IP_ADDR_MAX_LEN] = { 0 };
+		Utils::LongToAddress(addrStr, cliAddr.sin_addr.s_addr);
+		printf("%s:%i\n", addrStr, ntohs(cliAddr.sin_port));
 		
 		// parse the packet
 		FSPRequest req = FSPRequest::Parse(buf, n);
+
+		printf("Command: %02X\n", req.pHdr->command);
+		Utils::PrintHex(buf, n);
 
 		// @todo actually test this?!
 	}

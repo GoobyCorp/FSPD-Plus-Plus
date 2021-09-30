@@ -14,6 +14,7 @@ USHORT FSPRequest::GetSize() {
 
 USHORT FSPRequest::Serialize(PBYTE pbOut) {
     memcpy(pbOut, this->pHdr, sizeof(FSP_HDR));
+    Utils::SwapFSPHeaderEndian((PFSP_HDR)pbOut);  // to big endian
     memcpy(pbOut + sizeof(FSP_HDR), this->pbData, this->cbData);
     memcpy(pbOut + sizeof(FSP_HDR) + this->cbData, this->pbExtra, this->cbExtra);
     return this->GetSize();
@@ -22,13 +23,14 @@ USHORT FSPRequest::Serialize(PBYTE pbOut) {
 FSPRequest FSPRequest::Parse(PBYTE pbData, UINT32 cbData) {
     FSPRequest req;
     req.pHdr = (PFSP_HDR)pbData;
+    Utils::SwapFSPHeaderEndian(req.pHdr);  // to little endian
     req.pbData = pbData + sizeof(FSP_HDR);
     req.pbExtra = pbData + sizeof(FSP_HDR) + req.pHdr->length;
     req.cbData = req.pHdr->length;
     req.cbExtra = cbData - (sizeof(FSP_HDR) + req.pHdr->length);
 
     BYTE storCksm = req.pHdr->checksum;
-    BYTE calcCksm = Utils::CalcClientToServerChecksum(pbData, sizeof(FSP_HDR) + req.pHdr->length);
+    BYTE calcCksm = Utils::CalcClientToServerChecksum(pbData, req.GetSize());
     if(storCksm != calcCksm) {
         printf("Checksum mismatch!\n");
     }

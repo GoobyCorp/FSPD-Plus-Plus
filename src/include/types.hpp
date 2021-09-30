@@ -1,5 +1,11 @@
 #ifndef _TYPES_HPP
 #define _TYPES_HPP
+
+// defines
+#define es16(x) x = bswap16(x)
+#define es32(x) x = bswap32(x)
+#define es64(x) x = bswap64(x)
+
 typedef char* PCHAR;
 typedef unsigned char  BYTE, uint8, u8, UINT8;
 typedef unsigned short uint16, u16, ushort, USHORT, UINT16;
@@ -84,11 +90,12 @@ typedef FSP_HDR* PFSP_HDR;
 typedef FSP_PKT* PFSP_PKT;
 
 // constants
-#define SERVER_ADDR "0.0.0.0"
+#define SERVER_ADDR "192.168.1.19"
 #define SERVER_PORT 7717
 #define FSP_HSIZE 12
 #define FSP_SPACE 1024
 #define FSP_MAXSPACE FSP_HSIZE + FSP_SPACE
+#define IP_ADDR_MAX_LEN 16
 #define TRUE 1
 #define FALSE 0
 #endif
