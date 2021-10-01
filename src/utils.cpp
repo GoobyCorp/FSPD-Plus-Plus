@@ -32,23 +32,32 @@ int Utils::ByteSum(PBYTE data, UINT32 size) {
     return sum;
 }
 
-BYTE Utils::ComputeChecksum(PBYTE data, UINT32 size, UINT32 sum) {
+BYTE Utils::CalcClientToServerChecksum(PBYTE data, UINT32 size) {
     // null checksum
     *(PBYTE)(data + OFFS_CKSM) = 0;
 
+    UINT32 sum = size;
     UINT32 cksm;
     PBYTE t;
-    for(t = data; t < (data + size); sum += *t++);
+    for(size_t i = 0; i < size; i++) {
+        sum += data[i];
+    }
     cksm = sum + (sum >> 8);
     return cksm;
 }
 
-BYTE Utils::CalcClientToServerChecksum(PBYTE data, UINT32 size) {
-    return Utils::ComputeChecksum(data, size, size);
-}
-
 BYTE Utils::CalcServerToClientChecksum(PBYTE data, UINT32 size) {
-    return Utils::ComputeChecksum(data, size, 0);
+    // null checksum
+    *(PBYTE)(data + OFFS_CKSM) = 0;
+
+    int sum = 0;
+    UINT32 cksm;
+    PBYTE t;
+    for(size_t i = 0; i < size; i++) {
+        sum += data[i];
+    }
+    cksm = sum + (sum >> 8);
+    return cksm;
 }
 
 UINT32 Utils::CalcPadSize(UINT32 size, UINT32 boundary) {
@@ -66,14 +75,32 @@ BOOL Utils::IsFile(PCHAR path) {
     return fs::is_regular_file(path);
 }
 
-void Utils::SwapFSPHeaderEndian(PFSP_HDR pHdr) {
+PVOID Utils::AllocAndCopy(PVOID pData, UINT32 size) {
+    void* t = calloc(1, size);
+    memcpy(t, pData, size);
+    return t;
+}
+
+PCHAR Utils::AllocAndCopyString(PCHAR str) {
+    PCHAR t = (PCHAR)calloc(1, strlen(str) + 1);
+    memcpy(t, str, strlen(str));
+    return t;
+}
+
+VOID Utils::CopyToVector(vector<BYTE>* pbVec, PBYTE pbData, UINT32 cbData) {
+    for(int i = 0; i < cbData; i++) {
+        pbVec->push_back(pbData[i]);
+    }
+}
+
+VOID Utils::SwapFSPHeaderEndian(PFSP_HDR pHdr) {
     es16(pHdr->key);
     es16(pHdr->sequence);
     es16(pHdr->length);
     es32(pHdr->position);
 }
 
-void Utils::SwapRDIRENTHeaderEndian(PRDIRENT_HDR pHdr) {
+VOID Utils::SwapRDIRENTHeaderEndian(PRDIRENT_HDR pHdr) {
     es32(pHdr->FileTime);
     es32(pHdr->FileSize);
 }

@@ -1,5 +1,6 @@
 class Globals {
     public:
-        static USHORT FSP_KEY;
+        static UINT16 FSP_KEY;
         static PCHAR  FSP_PASSWORD;
+        static PCHAR  FSP_DIRECTORY;
 };

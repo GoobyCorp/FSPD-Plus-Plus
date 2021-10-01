@@ -1,11 +1,12 @@
 #pragma once
 
+#include <memory>
 #include <string>
 #include <stdio.h>
 #include <cstdarg>
+#include <memory.h>
 #include <iostream>
 #include <stdlib.h>
-#include <memory.h>
 #include <filesystem>
 #include <sys/types.h>
 #include <arpa/inet.h>

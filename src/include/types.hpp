@@ -6,11 +6,21 @@
 #define es32(x) x = bswap32(x)
 #define es64(x) x = bswap64(x)
 
+// primitives
+typedef void           VOID;
 typedef char           CHAR;
 typedef unsigned char  BYTE, uint8, u8, UINT8;
 typedef unsigned short uint16, u16, ushort, USHORT, UINT16;
 typedef unsigned int   uint32, u32, UINT32, BOOL;
 typedef unsigned long  ulong, ULONG;
+
+// pointers - primitives
+typedef void*   PVOID;
+typedef CHAR*   PCHAR;
+typedef BYTE*   PBYTE;
+typedef UINT16* PUSHORT;
+typedef UINT32* PUINT32;
+typedef ULONG*  PULONG;
 
 // enums
 enum {
@@ -62,33 +72,35 @@ enum RDIRENT_TYPE:BYTE {
 };
 
 // structs
-struct RECEIVE_CLIENT_ARGS {
-	int sock;
+struct QUEUE_ITEM {
+	PBYTE  pbData;
+	UINT32 size;
+};
+
+struct RDIRENT_ITEM {
+	PBYTE  pbData;
+	UINT32 size;
 };
 
 struct FSP_HDR {
-	FSP_COMMAND command;
-	BYTE        checksum;
-	USHORT      key;
-	USHORT      sequence;
-	USHORT      length;
-	UINT32      position;
+	BYTE   command;
+	BYTE   checksum;
+	UINT16 key;
+	UINT16 sequence;
+	UINT16 length;
+	UINT32 position;
 };
 
 struct RDIRENT_HDR {
-	UINT32       FileTime;
-	UINT32       FileSize;
-	RDIRENT_TYPE Type;
+	UINT32 FileTime;
+	UINT32 FileSize;
+	BYTE   Type;
 };
 
-// pointers
-typedef CHAR*        PCHAR;
-typedef BYTE*        PBYTE;
-typedef UINT16*      PUSHORT;
-typedef UINT32*      PUINT32;
-typedef ULONG*       PULONG;
-typedef FSP_HDR*     PFSP_HDR;
-typedef RDIRENT_HDR* PRDIRENT_HDR;
+// pointers - structs
+typedef FSP_HDR*      PFSP_HDR;
+typedef RDIRENT_HDR*  PRDIRENT_HDR;
+typedef RDIRENT_ITEM* PRDIRENT_ITEM;
 
 // constants
 #define SERVER_ADDR "192.168.1.19"

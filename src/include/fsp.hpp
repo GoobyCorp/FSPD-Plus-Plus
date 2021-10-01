@@ -9,9 +9,9 @@ class RDIRENT {
         UINT32 GetSize();
         PBYTE Pack(PUINT32 pcbOut);
         // functions - static
-        static RDIRENT Create(PCHAR path);
-        static RDIRENT CreateSkip();
-        static RDIRENT CreateEnd();
+        static RDIRENT* Create(PCHAR path);
+        static RDIRENT* CreateSkip();
+        static RDIRENT* CreateEnd();
 };
 
 class FSPRequest {
@@ -22,9 +22,9 @@ class FSPRequest {
         PBYTE pbExtra = 0;
 
         // variables
-        USHORT cbData = 0;
-        USHORT cbExtra = 0;
-        USHORT blkSize = 0;
+        UINT16 cbData = 0;
+        UINT16 cbExtra = 0;
+        UINT16 blkSize = 0;
 
         // command-specific
         PCHAR pcPassword = 0;
@@ -37,6 +37,6 @@ class FSPRequest {
         UINT32 GetSize();
         PBYTE Pack(PUINT32 pcbOut);
         // functions - static
-        static FSPRequest Parse(PBYTE pbData, UINT32 cbData);
-        static FSPRequest Create(FSP_COMMAND cmd, PBYTE pbData, USHORT cbData, USHORT pos = 0, USHORT seq = 0);
+        static FSPRequest* Parse(PBYTE pbData, UINT32 cbData);
+        static FSPRequest* Create(BYTE cmd, PBYTE pbData, UINT16 cbData, UINT16 pos = 0, UINT16 seq = 0);
 };
