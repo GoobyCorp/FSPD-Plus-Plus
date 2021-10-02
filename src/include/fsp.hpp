@@ -1,3 +1,5 @@
+#ifndef _FSP_HPP
+#define _FSP_HPP
 class RDIRENT {
     public:
         PRDIRENT_HDR pHdr = 0;
@@ -7,11 +9,24 @@ class RDIRENT {
         RDIRENT();
         ~RDIRENT();
         UINT32 GetSize();
-        PBYTE Pack(PUINT32 pcbOut);
+        PFSP_ALLOC Pack();
         // functions - static
         static RDIRENT* Create(PCHAR path);
         static RDIRENT* CreateSkip();
         static RDIRENT* CreateEnd();
+};
+
+class STAT {
+    public:
+        PSTAT_HDR pHdr = 0;
+
+        // functions - class
+        STAT();
+        ~STAT();
+        UINT32 GetSize();
+        PFSP_ALLOC Pack();
+        // functions - static
+        static STAT* Create(PCHAR path);
 };
 
 class FSPRequest {
@@ -35,8 +50,9 @@ class FSPRequest {
         FSPRequest();
         ~FSPRequest();
         UINT32 GetSize();
-        PBYTE Pack(PUINT32 pcbOut);
+        PFSP_ALLOC Pack();
         // functions - static
         static FSPRequest* Parse(PBYTE pbData, UINT32 cbData);
-        static FSPRequest* Create(BYTE cmd, PBYTE pbData, UINT16 cbData, UINT16 pos = 0, UINT16 seq = 0);
+        static FSPRequest* Create(BYTE cmd, PBYTE pbData, UINT16 cbData, PBYTE pbExtra, UINT16 cbExtra, UINT16 pos = 0, UINT16 seq = 0);
 };
+#endif

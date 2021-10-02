@@ -93,6 +93,18 @@ VOID Utils::CopyToVector(vector<BYTE>* pbVec, PBYTE pbData, UINT32 cbData) {
     }
 }
 
+VOID Utils::ClearVector(vector<vector<BYTE>>* pbVec) {
+    for(int i = 0; i < pbVec->size(); i++) {
+        pbVec[i].clear();
+    }
+    pbVec->clear();
+}
+
+PCHAR Utils::StripDirSep(PCHAR path) {
+    string s(path);
+    return path + s.find_first_not_of('/');
+}
+
 VOID Utils::SwapFSPHeaderEndian(PFSP_HDR pHdr) {
     es16(pHdr->key);
     es16(pHdr->sequence);
@@ -101,6 +113,11 @@ VOID Utils::SwapFSPHeaderEndian(PFSP_HDR pHdr) {
 }
 
 VOID Utils::SwapRDIRENTHeaderEndian(PRDIRENT_HDR pHdr) {
+    es32(pHdr->FileTime);
+    es32(pHdr->FileSize);
+}
+
+VOID Utils::SwapSTATHeaderEndian(PSTAT_HDR pHdr) {
     es32(pHdr->FileTime);
     es32(pHdr->FileSize);
 }

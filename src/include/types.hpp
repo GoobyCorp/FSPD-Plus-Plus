@@ -18,7 +18,7 @@ typedef unsigned long  ulong, ULONG;
 typedef void*   PVOID;
 typedef CHAR*   PCHAR;
 typedef BYTE*   PBYTE;
-typedef UINT16* PUSHORT;
+typedef UINT16* PUINT16;
 typedef UINT32* PUINT32;
 typedef ULONG*  PULONG;
 
@@ -72,16 +72,6 @@ enum RDIRENT_TYPE:BYTE {
 };
 
 // structs
-struct QUEUE_ITEM {
-	PBYTE  pbData;
-	UINT32 size;
-};
-
-struct RDIRENT_ITEM {
-	PBYTE  pbData;
-	UINT32 size;
-};
-
 struct FSP_HDR {
 	BYTE   command;
 	BYTE   checksum;
@@ -97,14 +87,27 @@ struct RDIRENT_HDR {
 	BYTE   Type;
 };
 
+struct STAT_HDR {
+	UINT32 FileTime;
+	UINT32 FileSize;
+	BYTE   Type;
+};
+
+struct FSP_ALLOC {
+	PBYTE  pbData;
+	UINT32 cbData;
+};
+
 // pointers - structs
-typedef FSP_HDR*      PFSP_HDR;
-typedef RDIRENT_HDR*  PRDIRENT_HDR;
-typedef RDIRENT_ITEM* PRDIRENT_ITEM;
+typedef FSP_HDR*     PFSP_HDR;
+typedef RDIRENT_HDR* PRDIRENT_HDR;
+typedef STAT_HDR*    PSTAT_HDR;
+typedef FSP_ALLOC*  PFSP_ALLOC;
 
 // constants
 #define SERVER_ADDR "192.168.1.19"
 #define SERVER_PORT 7717
+
 #define FSP_HSIZE 12
 #define FSP_SPACE 1024
 #define FSP_MAXSPACE FSP_HSIZE + FSP_SPACE

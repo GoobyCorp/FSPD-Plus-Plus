@@ -1,3 +1,5 @@
+#ifndef _UTILS_HPP
+#define _UTILS_HPP
 class Utils {
     public:
         static ULONG AddressToLong(const PCHAR addr);
@@ -12,6 +14,10 @@ class Utils {
         static PVOID AllocAndCopy(PVOID pData, UINT32 size);
         static PCHAR AllocAndCopyString(PCHAR str);
         static VOID CopyToVector(vector<BYTE>* pbVec, PBYTE pbData, UINT32 cbData);
+        static VOID ClearVector(vector<vector<BYTE>>* pbVec);
+        static PCHAR StripDirSep(PCHAR path);
         static VOID SwapFSPHeaderEndian(PFSP_HDR pHdr);
         static VOID SwapRDIRENTHeaderEndian(PRDIRENT_HDR pHdr);
+        static VOID SwapSTATHeaderEndian(PSTAT_HDR pHdr);
 };
+#endif

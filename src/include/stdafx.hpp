@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <cstdarg>
 #include <memory.h>
-#include <iostream>
 #include <stdlib.h>
 #include <filesystem>
 #include <sys/types.h>
@@ -23,5 +22,6 @@ using namespace std::experimental;
 #include "bswap.hpp"
 #include "types.hpp"
 #include "globals.hpp"
+#include "cache.hpp"
 #include "utils.hpp"
 #include "fsp.hpp"

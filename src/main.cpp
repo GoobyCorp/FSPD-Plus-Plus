@@ -1,9 +1,5 @@
 #include "stdafx.hpp"
 
-// packet queue
-vector<vector<BYTE>> pkts;
-PCHAR LastGetDir = "";
-
 void HandleGetDir(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen, FSPRequest* pReq) {
 	// packet vars
 	UINT32 pktNum = pReq->pHdr->position / FSP_SPACE;
@@ -12,33 +8,29 @@ void HandleGetDir(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen, FSPReque
 	// create full path to the FSP directory
 	fs::path p(Globals::FSP_DIRECTORY);
 	p = fs::absolute(p);
-	if(strcmp(pReq->pcDirectory, "/") != 0)
-		p /= pReq->pcDirectory;
-	
-	if(LastGetDir == "" || pkts.size() == 0 || pReq->pcDirectory != LastGetDir) {
-		LastGetDir = pReq->pcDirectory;
+	// create server directory
+	if(!fs::exists(p))
+		fs::create_directory(Globals::FSP_DIRECTORY);
+	// append requested directory onto it
+	p /= Utils::StripDirSep(pReq->pcDirectory);
+
+	if(strcmp(Cache::FspLastGetDir, "") == 0 || Cache::PktQueue.size() == 0 || strcmp(p.c_str(), Cache::FspLastGetDir) != 0) {
+		Cache::FspLastGetDir = (PCHAR)p.c_str();
 
 		// clear packet queue
-		pkts.empty();
+		Utils::ClearVector(&Cache::PktQueue);
 
 		// entry queue
 		vector<vector<BYTE>> ents;
 
 		for (const auto & entry : fs::directory_iterator(p)) {
 			vector<BYTE> ent;
-			if(fs::is_directory(entry.path())) {
+			if(fs::is_directory(entry.path()) || fs::is_regular_file(entry.path())) {
 				RDIRENT* pEnt = RDIRENT::Create((PCHAR)entry.path().c_str());
-				UINT32 cbData;
-				PBYTE pbData = pEnt->Pack(&cbData);
-				Utils::CopyToVector(&ent, pbData, cbData);
-				free(pbData);
-				delete pEnt;
-			} else if(fs::is_regular_file(entry.path())) {
-				RDIRENT* pEnt = RDIRENT::Create((PCHAR)entry.path().c_str());
-				UINT32 cbData;
-				PBYTE pbData = pEnt->Pack(&cbData);
-				Utils::CopyToVector(&ent, pbData, cbData);
-				free(pbData);
+				PFSP_ALLOC pAlloc = pEnt->Pack();
+				Utils::CopyToVector(&ent, pAlloc->pbData, pAlloc->cbData);
+				free(pAlloc->pbData);
+				delete pAlloc;
 				delete pEnt;
 			}
 			ents.push_back(ent);
@@ -47,14 +39,14 @@ void HandleGetDir(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen, FSPReque
 		// create end
 		vector<BYTE> ent;
 		RDIRENT* pEnt = RDIRENT::CreateEnd();
-		UINT32 cbData;
-		PBYTE pbData = pEnt->Pack(&cbData);
-		Utils::CopyToVector(&ent, pbData, cbData);
+		PFSP_ALLOC pAlloc = pEnt->Pack();
+		Utils::CopyToVector(&ent, pAlloc->pbData, pAlloc->cbData);
 		ents.push_back(ent);
-		free(pbData);
+		free(pAlloc->pbData);
+		delete pAlloc;
 
 		// loop through each entry and create a packet
-		while(true) {
+		while(TRUE) {
 			vector<BYTE> pkt;
 
 			while(ents.size() > 0) {
@@ -68,10 +60,10 @@ void HandleGetDir(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen, FSPReque
 						
 					} else {
 						RDIRENT* pEnt = RDIRENT::CreateSkip();
-						UINT32 cbSize;
-						PBYTE pbData = pEnt->Pack(&cbSize);
-						Utils::CopyToVector(&pkt, pbData, cbSize);
-						free(pbData);
+						PFSP_ALLOC pAlloc = pEnt->Pack();
+						Utils::CopyToVector(&ent, pAlloc->pbData, pAlloc->cbData);
+						free(pAlloc->pbData);
+						delete pAlloc;
 						delete pEnt;
 					}
 					// pad to boundary
@@ -88,38 +80,113 @@ void HandleGetDir(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen, FSPReque
 			}
 
 			// add packet to send queue
-			pkts.push_back(pkt);
+			Cache::PktQueue.push_back(pkt);
 
+			// leave the loop since the queue is empty
 			if(ents.size() == 0)
 				break;
 		}
 	}
 
-	if(pReq->pcDirectory == LastGetDir && pkts.size() > 0) {
+	if(strcmp(p.c_str(), Cache::FspLastGetDir) == 0 && Cache::PktQueue.size() > 0) {
+		// print the directory
 		if(pktNum == 0)
-			printf("Reading directory \"%s\"...\n", pReq->pcDirectory);
+			printf("Reading directory \"%s\"...\n", p.c_str());
+
 		int n;
-		FSPRequest* pSndReq = FSPRequest::Create(pReq->pHdr->command, (pkts[pktNum].data() + pktOff), (pkts[pktNum].size() - pktOff), pReq->pHdr->position, pReq->pHdr->sequence);
-		UINT32 sndSize;
-		PBYTE pbSndBuf = pSndReq->Pack(&sndSize);
-		Utils::PrintHex(pbSndBuf, sndSize);
-		if((n = sendto(srvSock, pbSndBuf, sndSize, 0, cliAddr, cliAddrLen)) == -1) {
+		FSPRequest* pSndReq = FSPRequest::Create(pReq->pHdr->command, (Cache::PktQueue[pktNum].data() + pktOff), (Cache::PktQueue[pktNum].size() - pktOff), NULL, 0, pReq->pHdr->position, pReq->pHdr->sequence);
+		PFSP_ALLOC pAlloc = pSndReq->Pack();
+		// Utils::PrintHex(pbSndBuf, sndSize);
+		if((n = sendto(srvSock, pAlloc->pbData, pAlloc->cbData, 0, cliAddr, cliAddrLen)) == -1) {
 
 		}
-		free(pbSndBuf);
+		free(pAlloc->pbData);
+		delete pAlloc;
 		delete pSndReq;
+
+		// clear cache since we've sent all the packets
+		if((pktNum + 1) == Cache::PktQueue.size())
+			Utils::ClearVector(&Cache::PktQueue);
 	}
+}
+
+void HandleGetFile(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen, FSPRequest* pReq) {
+	// create full path to the FSP directory
+	fs::path p(Globals::FSP_DIRECTORY);
+	p = fs::absolute(p);
+	// create server directory
+	if(!fs::exists(p))
+		fs::create_directory(Globals::FSP_DIRECTORY);
+	// append requested directory onto it
+	p /= Utils::StripDirSep(pReq->pcFilename);
+
+	// set block size
+	pReq->blkSize = FSP_SPACE;
+
+	// print the file being accessed
+	//if(strcmp(Cache::FspLastGetFile, "") == 0 || strcmp(Cache::FspLastGetFile, p.c_str()) != 0) {
+	//	Cache::FspLastGetFile = (PCHAR)p.c_str();
+	//	printf("Serving file \"%s\"...\n", p.c_str());
+	//}
+
+	printf("Seek Position: %u\n", pReq->pHdr->position);
+	PBYTE pbData = (PBYTE)calloc(1, pReq->blkSize);
+	FILE* f = fopen(p.c_str(), "rb");
+	fseek(f, pReq->pHdr->position, SEEK_SET);
+	int bRead = fread(pbData, sizeof(BYTE), pReq->blkSize, f);
+	fclose(f);
+	pbData = (PBYTE)realloc(pbData, bRead);
+
+	int n;
+	FSPRequest* pSndReq = FSPRequest::Create(pReq->pHdr->command, pbData, bRead, NULL, 0, pReq->pHdr->position, pReq->pHdr->sequence);
+	PFSP_ALLOC pAlloc = pSndReq->Pack();
+	printf("Send Size: %i\n", pAlloc->cbData);
+	free(pbData);
+	// Utils::PrintHex(pbSndBuf, sndSize);
+	if((n = sendto(srvSock, pAlloc->pbData, pAlloc->cbData, 0, cliAddr, cliAddrLen)) == -1) {
+		printf("Error sending!\n");
+	}
+	free(pAlloc->pbData);
+	delete pAlloc;
+	delete pSndReq;
+}
+
+void HandleStat(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen, FSPRequest* pReq) {
+	// create full path to the FSP directory
+	fs::path p(Globals::FSP_DIRECTORY);
+	p = fs::absolute(p);
+	// create server directory
+	if(!fs::exists(p))
+		fs::create_directory(Globals::FSP_DIRECTORY);
+	// append requested directory onto it
+	p /= Utils::StripDirSep(pReq->pcFilename);
+
+	STAT* pStat = STAT::Create((PCHAR)p.c_str());
+	PFSP_ALLOC pAllocS = pStat->Pack();
+
+	int n;
+	FSPRequest* pSndReq = FSPRequest::Create(pReq->pHdr->command, pAllocS->pbData, pAllocS->cbData, NULL, 0, pReq->pHdr->position, pReq->pHdr->sequence);
+	PFSP_ALLOC pAllocR = pSndReq->Pack();
+	free(pAllocS->pbData);
+	// Utils::PrintHex(pbSndBuf, sndSize);
+	if((n = sendto(srvSock, pAllocR->pbData, pAllocR->cbData, 0, cliAddr, cliAddrLen)) == -1) {
+
+	}
+	free(pAllocR->pbData);
+	delete pAllocS;
+	delete pAllocR;
+	delete pSndReq;
 }
 
 void HandleBye(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen, FSPRequest* pReq) {
 	int n;
-	FSPRequest* pSndReq = FSPRequest::Create(CC_BYE, NULL, 0, pReq->pHdr->position, pReq->pHdr->sequence);
-	UINT32 sndSize;
-	PBYTE sndBuf = pSndReq->Pack(&sndSize);
-	if((n = sendto(srvSock, sndBuf, sndSize, 0, cliAddr, cliAddrLen)) == -1) {
+	FSPRequest* pSndReq = FSPRequest::Create(CC_BYE, NULL, 0, NULL, 0, pReq->pHdr->position, pReq->pHdr->sequence);
+	PFSP_ALLOC pAlloc = pSndReq->Pack();
+	if((n = sendto(srvSock, pAlloc->pbData, pAlloc->cbData, 0, cliAddr, cliAddrLen)) == -1) {
 
 	}
-	free(sndBuf);
+	free(pAlloc->pbData);
+	delete pAlloc;
 	delete pSndReq;
 }
 
@@ -168,12 +235,12 @@ int main(int argc, char* argv[]) {
 	while(true) {
 		// receive variables
 		int len, n;
-		BYTE rcvBuf[FSP_MAXSPACE];
-		memset(rcvBuf, 0, FSP_MAXSPACE);
+		PBYTE pbRcvData = (PBYTE)calloc(1, FSP_MAXSPACE);
+		memset(pbRcvData, 0, FSP_MAXSPACE);
 
 		sockaddr_in cliAddr;
 		memset(&cliAddr, 0, sizeof(cliAddr));
-		if((n = recvfrom(srvSock, rcvBuf, FSP_MAXSPACE, 0, (sockaddr*)&cliAddr, (socklen_t*)&len)) == -1) {
+		if((n = recvfrom(srvSock, pbRcvData, FSP_MAXSPACE, 0, (sockaddr*)&cliAddr, (socklen_t*)&len)) == -1) {
 			perror("recvfrom failed!\n");
 			return ERROR_RECEIVE_FAILED;
 		}
@@ -185,15 +252,16 @@ int main(int argc, char* argv[]) {
 		}
 
 		// print client info
-		char addrStr[IP_ADDR_MAX_LEN] = { 0 };
-		Utils::LongToAddress(addrStr, cliAddr.sin_addr.s_addr);
-		printf("%s:%i\n", addrStr, ntohs(cliAddr.sin_port));
+		//char addrStr[IP_ADDR_MAX_LEN] = { 0 };
+		//Utils::LongToAddress(addrStr, cliAddr.sin_addr.s_addr);
+		//printf("%s:%i\n", addrStr, ntohs(cliAddr.sin_port));
 		
 		// parse the packet
-		FSPRequest* pReq = FSPRequest::Parse(rcvBuf, n);
+		FSPRequest* pReq = FSPRequest::Parse(pbRcvData, n);
+		free(pbRcvData);
 
-		printf("Command: %02X\n", pReq->pHdr->command);
-		Utils::PrintHex(rcvBuf, n);
+		// printf("Command: %02X\n", pReq->pHdr->command);
+		// Utils::PrintHex(rcvBuf, n);
 
 		// check password
 		switch(pReq->pHdr->command) {
@@ -218,6 +286,14 @@ int main(int argc, char* argv[]) {
 		switch(pReq->pHdr->command) {
 			case CC_GET_DIR: {
 				HandleGetDir(srvSock, (sockaddr*)&cliAddr, len, pReq);
+				break;
+			}
+			case CC_GET_FILE: {
+				HandleGetFile(srvSock, (sockaddr*)&cliAddr, len, pReq);
+				break;
+			}
+			case CC_STAT: {
+				HandleStat(srvSock, (sockaddr*)&cliAddr, len, pReq);
 				break;
 			}
 			case CC_BYE: {
