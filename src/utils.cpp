@@ -36,13 +36,11 @@ BYTE Utils::CalcClientToServerChecksum(PBYTE data, UINT32 size) {
     // null checksum
     *(PBYTE)(data + OFFS_CKSM) = 0;
 
-    UINT32 sum = size;
-    UINT32 cksm;
-    PBYTE t;
-    for(size_t i = 0; i < size; i++) {
-        sum += data[i];
+    UINT32 cksm = size;
+    for(int i = 0; i < size; i++) {
+        cksm += data[i];
     }
-    cksm = sum + (sum >> 8);
+    cksm += (cksm >> 8);
     return cksm;
 }
 
@@ -50,13 +48,11 @@ BYTE Utils::CalcServerToClientChecksum(PBYTE data, UINT32 size) {
     // null checksum
     *(PBYTE)(data + OFFS_CKSM) = 0;
 
-    int sum = 0;
-    UINT32 cksm;
-    PBYTE t;
-    for(size_t i = 0; i < size; i++) {
-        sum += data[i];
+    UINT32 cksm = 0;
+    for(int i = 0; i < size; i++) {
+        cksm += data[i];
     }
-    cksm = sum + (sum >> 8);
+    cksm += (cksm >> 8);
     return cksm;
 }
 

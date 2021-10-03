@@ -1,5 +1,11 @@
 #include "stdafx.hpp"
 
+/* References:
+https://sourceforge.net/p/fsp/code/ci/master/tree/doc/PROTOCOL
+https://github.com/emukidid/swiss-gc/blob/master/cube/swiss/source/devices/fsp/deviceHandler-FSP.c
+https://github.com/emukidid/swiss-gc/blob/master/cube/swiss/source/devices/fsp/fsplib.c
+*/
+
 void HandleGetDir(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen, FSPRequest* pReq) {
 	// packet vars
 	UINT32 pktNum = pReq->pHdr->position / FSP_SPACE;
@@ -105,8 +111,8 @@ void HandleGetDir(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen, FSPReque
 		delete pSndReq;
 
 		// clear cache since we've sent all the packets
-		if((pktNum + 1) == Cache::PktQueue.size())
-			Utils::ClearVector(&Cache::PktQueue);
+		/* if((pktNum + 1) == Cache::PktQueue.size())
+			Utils::ClearVector(&Cache::PktQueue); */
 	}
 }
 
@@ -123,13 +129,13 @@ void HandleGetFile(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen, FSPRequ
 	// set block size
 	pReq->blkSize = FSP_SPACE;
 
-	// print the file being accessed
-	//if(strcmp(Cache::FspLastGetFile, "") == 0 || strcmp(Cache::FspLastGetFile, p.c_str()) != 0) {
-	//	Cache::FspLastGetFile = (PCHAR)p.c_str();
-	//	printf("Serving file \"%s\"...\n", p.c_str());
-	//}
+	printf("Command:  0x%02X\n", pReq->pHdr->command);
+	printf("Checksum: 0x%02X\n", pReq->pHdr->checksum);
+	printf("Key:      0x%04X\n", pReq->pHdr->key);
+	printf("Sequence: 0x%04X\n", pReq->pHdr->sequence);
+	printf("Length:   0x%04X\n", pReq->pHdr->length);
+	printf("Position: 0x%08X\n", pReq->pHdr->position);
 
-	printf("Seek Position: %u\n", pReq->pHdr->position);
 	PBYTE pbData = (PBYTE)calloc(1, pReq->blkSize);
 	FILE* f = fopen(p.c_str(), "rb");
 	fseek(f, pReq->pHdr->position, SEEK_SET);
@@ -140,9 +146,7 @@ void HandleGetFile(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen, FSPRequ
 	int n;
 	FSPRequest* pSndReq = FSPRequest::Create(pReq->pHdr->command, pbData, bRead, NULL, 0, pReq->pHdr->position, pReq->pHdr->sequence);
 	PFSP_ALLOC pAlloc = pSndReq->Pack();
-	printf("Send Size: %i\n", pAlloc->cbData);
 	free(pbData);
-	// Utils::PrintHex(pbSndBuf, sndSize);
 	if((n = sendto(srvSock, pAlloc->pbData, pAlloc->cbData, 0, cliAddr, cliAddrLen)) == -1) {
 		printf("Error sending!\n");
 	}
@@ -244,6 +248,7 @@ int main(int argc, char* argv[]) {
 			perror("recvfrom failed!\n");
 			return ERROR_RECEIVE_FAILED;
 		}
+		pbRcvData = (PBYTE)realloc(pbRcvData, n);
 
 		// check bounds
 		if(!(n > 0 && n <= FSP_MAXSPACE)) {
@@ -258,10 +263,8 @@ int main(int argc, char* argv[]) {
 		
 		// parse the packet
 		FSPRequest* pReq = FSPRequest::Parse(pbRcvData, n);
+		// free packet data
 		free(pbRcvData);
-
-		// printf("Command: %02X\n", pReq->pHdr->command);
-		// Utils::PrintHex(rcvBuf, n);
 
 		// check password
 		switch(pReq->pHdr->command) {

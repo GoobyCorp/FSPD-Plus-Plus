@@ -23,7 +23,7 @@ typedef UINT32* PUINT32;
 typedef ULONG*  PULONG;
 
 // enums
-enum {
+typedef enum {
 	ERROR_NONE = 0,
 	ERROR_SOCKET_CREATE_FAILED,
 	ERROR_SETSOCKOPT_FAILED,
@@ -33,7 +33,7 @@ enum {
 	ERROR_SIZE_OUT_OF_BOUNDS
 };
 
-enum FSP_OFFSET {
+typedef enum FSP_OFFSET {
 	OFFS_CMD      = 0,  // 0-1
 	OFFS_CKSM     = 1,  // 1-2
 	OFFS_KEY      = 2,  // 2-4
@@ -42,7 +42,7 @@ enum FSP_OFFSET {
 	OFFS_POS      = 8   // 8-12
 };
 
-enum FSP_COMMAND:BYTE {
+typedef enum FSP_COMMAND:BYTE {
 	CC_VERSION   = 0x10,
 	CC_ERR       = 0x40,
 	CC_GET_DIR   = 0x41,
@@ -64,7 +64,7 @@ enum FSP_COMMAND:BYTE {
 	CC_TEST      = 0x81
 };
 
-enum RDIRENT_TYPE:BYTE {
+typedef enum RDIRENT_TYPE:BYTE {
 	RDTYPE_END  = 0x00,
 	RDTYPE_FILE = 0x01,
 	RDTYPE_DIR  = 0x02,
@@ -72,7 +72,7 @@ enum RDIRENT_TYPE:BYTE {
 };
 
 // structs
-struct FSP_HDR {
+typedef struct FSP_HDR {
 	BYTE   command;
 	BYTE   checksum;
 	UINT16 key;
@@ -81,19 +81,19 @@ struct FSP_HDR {
 	UINT32 position;
 };
 
-struct RDIRENT_HDR {
+typedef struct RDIRENT_HDR {
 	UINT32 FileTime;
 	UINT32 FileSize;
 	BYTE   Type;
 };
 
-struct STAT_HDR {
+typedef struct STAT_HDR {
 	UINT32 FileTime;
 	UINT32 FileSize;
 	BYTE   Type;
 };
 
-struct FSP_ALLOC {
+typedef struct FSP_ALLOC {
 	PBYTE  pbData;
 	UINT32 cbData;
 };

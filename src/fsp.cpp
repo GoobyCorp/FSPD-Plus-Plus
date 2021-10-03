@@ -21,7 +21,7 @@ UINT32 RDIRENT::GetSize() {
 
 PFSP_ALLOC RDIRENT::Pack() {
 	UINT32 cbOut = 0;
-	PBYTE pbOut = (PBYTE)calloc(1, FSP_MAXSPACE);
+	PBYTE pbOut = (PBYTE)calloc(1, FSP_SPACE);
 	PBYTE pbTmp = pbOut;
 	memcpy(pbTmp, &this->pHdr->FileTime, sizeof(UINT32));
 	pbTmp += sizeof(UINT32);
@@ -39,47 +39,50 @@ PFSP_ALLOC RDIRENT::Pack() {
 	UINT32 padSize = Utils::CalcPadSize(cbOut, 4);
 	memset(pbTmp, 0, padSize);
 	cbOut += padSize;
-	// *pcbOut = size;
 	pbOut = (PBYTE)realloc(pbOut, cbOut);
 	PFSP_ALLOC pAlloc = new FSP_ALLOC();
 	pAlloc->pbData = pbOut;
 	pAlloc->cbData = cbOut;
 	return pAlloc;
-	// return pbOut;
 }
 
 RDIRENT* RDIRENT::Create(PCHAR path) {
-	fs::path p(Globals::FSP_DIRECTORY);
-	p /= path;
 	RDIRENT* pEnt = new RDIRENT();
-	RDIRENT_HDR hdr;
-	hdr.FileTime = 1592534256;
-	if(fs::is_regular_file(p)) {
-		hdr.FileSize = fs::file_size(p);
-		hdr.Type = RDTYPE_FILE;
-		pEnt->pcFileName = Utils::AllocAndCopyString((PCHAR)p.filename().c_str());
-	} else if(fs::is_directory(p)) {
-		hdr.FileSize = 0;
-		hdr.Type = RDTYPE_DIR;
-		pEnt->pcFileName = Utils::AllocAndCopyString((PCHAR)p.filename().c_str());
+	PRDIRENT_HDR pHdr = new RDIRENT_HDR();
+	pHdr->FileTime = 1592534256;
+	if(fs::is_regular_file(path)) {
+		pHdr->FileSize = fs::file_size(path);
+		pHdr->Type = RDTYPE_FILE;
+		pEnt->pcFileName = Utils::AllocAndCopyString((PCHAR)fs::path(path).filename().c_str());
+	} else if(fs::is_directory(path)) {
+		pHdr->FileSize = 0;
+		pHdr->Type = RDTYPE_DIR;
+		pEnt->pcFileName = Utils::AllocAndCopyString((PCHAR)fs::path(path).filename().c_str());
 	}
-	pEnt->pHdr = (PRDIRENT_HDR)Utils::AllocAndCopy(&hdr, sizeof(RDIRENT_HDR));
+	pEnt->pHdr = (PRDIRENT_HDR)Utils::AllocAndCopy(pHdr, sizeof(RDIRENT_HDR));
+	delete pHdr;
 	return pEnt;
 }
 
 RDIRENT* RDIRENT::CreateSkip() {
 	RDIRENT* pEnt = new RDIRENT();
-	RDIRENT_HDR hdr;
-	hdr.Type = RDTYPE_SKIP;
-	pEnt->pHdr = (PRDIRENT_HDR)Utils::AllocAndCopy(&hdr, sizeof(RDIRENT_HDR));
+	PRDIRENT_HDR pHdr = new RDIRENT_HDR();
+	pHdr->FileTime = 0;
+	pHdr->FileSize = 0;
+	pHdr->Type = RDTYPE_SKIP;
+	pEnt->pHdr = (PRDIRENT_HDR)Utils::AllocAndCopy(pHdr, sizeof(RDIRENT_HDR));
+	delete pHdr;
 	return pEnt;
 }
 
 RDIRENT* RDIRENT::CreateEnd() {
 	RDIRENT* pEnt = new RDIRENT();
-	RDIRENT_HDR hdr;
-	hdr.Type = RDTYPE_END;
-	pEnt->pHdr = (PRDIRENT_HDR)Utils::AllocAndCopy(&hdr, sizeof(RDIRENT_HDR));
+	PRDIRENT_HDR pHdr = new RDIRENT_HDR();
+	pHdr->FileTime = 0;
+	pHdr->FileSize = 0;
+	pHdr->Type = RDTYPE_END;
+	pEnt->pHdr = (PRDIRENT_HDR)Utils::AllocAndCopy(pHdr, sizeof(RDIRENT_HDR));
+	delete pHdr;
 	return pEnt;
 }
 
@@ -101,7 +104,7 @@ UINT32 STAT::GetSize() {
 
 PFSP_ALLOC STAT::Pack() {
 	UINT32 cbOut = 0;
-	PBYTE pbOut = (PBYTE)calloc(1, FSP_MAXSPACE);
+	PBYTE pbOut = (PBYTE)calloc(1, FSP_SPACE);
 	PBYTE pbTmp = pbOut;
 	memcpy(pbTmp, &this->pHdr->FileTime, sizeof(UINT32));
 	pbTmp += sizeof(UINT32);
@@ -119,22 +122,21 @@ PFSP_ALLOC STAT::Pack() {
 }
 
 STAT* STAT::Create(PCHAR path) {
-	fs::path p(Globals::FSP_DIRECTORY);
-	p /= path;
 	STAT* pEnt = new STAT();
-	STAT_HDR hdr;
-	hdr.FileTime = 1592534256;
-	if(fs::is_regular_file(p)) {
-		hdr.FileSize = fs::file_size(p);
-		hdr.Type = RDTYPE_FILE;
-	} else if(fs::is_directory(p)) {
-		hdr.FileSize = 0;
-		hdr.Type = RDTYPE_DIR;
+	PSTAT_HDR pHdr = new STAT_HDR();
+	pHdr->FileTime = 1592534256;
+	if(fs::is_regular_file(path)) {
+		pHdr->FileSize = fs::file_size(path);
+		pHdr->Type = RDTYPE_FILE;
+	} else if(fs::is_directory(path)) {
+		pHdr->FileSize = 0;
+		pHdr->Type = RDTYPE_DIR;
 	} else {
-		hdr.FileSize = 0;
-		hdr.Type = 0;
+		pHdr->FileSize = 0;
+		pHdr->Type = 0;
 	}
-	pEnt->pHdr = (PSTAT_HDR)Utils::AllocAndCopy(&hdr, sizeof(STAT));
+	pEnt->pHdr = (PSTAT_HDR)Utils::AllocAndCopy(pHdr, sizeof(STAT));
+	delete pHdr;
 	return pEnt;
 }
 
@@ -185,87 +187,80 @@ PFSP_ALLOC FSPRequest::Pack() {
 }
 
 FSPRequest* FSPRequest::Parse(PBYTE pbData, UINT32 cbData) {
-	FSPRequest* req = new FSPRequest();
-	req->pHdr = (PFSP_HDR)Utils::AllocAndCopy(pbData, sizeof(FSP_HDR));
+	FSPRequest* pReq = new FSPRequest();
+	pReq->pHdr = (PFSP_HDR)Utils::AllocAndCopy(pbData, sizeof(FSP_HDR));
 
-	Utils::SwapFSPHeaderEndian(req->pHdr);  // to little endian
+	Utils::SwapFSPHeaderEndian(pReq->pHdr);  // to little endian
 
-	req->cbData = req->pHdr->length;
-	req->cbExtra = cbData - (sizeof(FSP_HDR) + req->pHdr->length);
+	pReq->cbData = pReq->pHdr->length;
+	pReq->cbExtra = cbData - (sizeof(FSP_HDR) + pReq->pHdr->length);
 
-	req->pbData = (PBYTE)Utils::AllocAndCopy(pbData + sizeof(FSP_HDR), req->cbData);
-	req->pbExtra = (PBYTE)Utils::AllocAndCopy(pbData + sizeof(FSP_HDR) + req->pHdr->length, req->cbExtra);
+	pReq->pbData = (PBYTE)Utils::AllocAndCopy(pbData + sizeof(FSP_HDR), pReq->cbData);
+	pReq->pbExtra = (PBYTE)Utils::AllocAndCopy(pbData + sizeof(FSP_HDR) + pReq->pHdr->length, pReq->cbExtra);
 
-	BYTE storCksm = req->pHdr->checksum;
-	BYTE calcCksm = Utils::CalcClientToServerChecksum(pbData, req->GetSize());
+	BYTE storCksm = pReq->pHdr->checksum;
+	BYTE calcCksm = Utils::CalcClientToServerChecksum(pbData, pReq->GetSize());
 	if(storCksm != calcCksm) {
 		printf("Checksum mismatch!\n");
 	}
 
-	switch(req->pHdr->command) {
-		case CC_GET_DIR: {
-			string s((PCHAR)req->pbData, req->cbData);
-			int pos;
-			if((pos = s.find("\n")) < string::npos) {
-				req->pcDirectory = Utils::AllocAndCopyString((PCHAR)s.substr(0, pos).c_str());
-				req->pcPassword = Utils::AllocAndCopyString((PCHAR)s.substr(pos + 1).c_str());
-			}
-			if(req->cbExtra == 2) {
-				req->blkSize = bswap16(*(PUINT16)req->pbExtra);
-			}
-			break;
+	if(pReq->pHdr->command == CC_GET_DIR) {
+		string s((PCHAR)pReq->pbData, pReq->cbData);
+		int pos;
+		if((pos = s.find("\n")) < string::npos) {
+			pReq->pcDirectory = Utils::AllocAndCopyString((PCHAR)s.substr(0, pos).c_str());
+			pReq->pcPassword = Utils::AllocAndCopyString((PCHAR)s.substr(pos + 1).c_str());
 		}
-		case CC_GET_FILE:
-		case CC_STAT:
-		case CC_DEL_FILE:
-		case CC_INSTALL: {
-			string s((PCHAR)req->pbData, req->cbData);
-			int pos;
-			if((pos = s.find("\n")) < string::npos) {
-				req->pcFilename = Utils::AllocAndCopyString((PCHAR)s.substr(0, pos).c_str());
-				req->pcPassword = Utils::AllocAndCopyString((PCHAR)s.substr(pos + 1).c_str());
-			}
-			if(req->pHdr->command == CC_GET_FILE && req->cbExtra == 2) {
-				req->blkSize = bswap16(*(PUINT16)req->pbExtra);
-			}
-			break;
+		if(pReq->cbExtra == 2) {
+			pReq->blkSize = bswap16(*(PUINT16)pReq->pbExtra);
 		}
-		default: {
-			break;
+	} else if(pReq->pHdr->command == CC_GET_FILE ||
+		pReq->pHdr->command == CC_STAT ||
+		pReq->pHdr->command == CC_DEL_FILE ||
+		pReq->pHdr->command == CC_INSTALL) {
+
+		string s((PCHAR)pReq->pbData, pReq->cbData);
+		int pos;
+		if((pos = s.find("\n")) < string::npos) {
+			pReq->pcFilename = Utils::AllocAndCopyString((PCHAR)s.substr(0, pos).c_str());
+			pReq->pcPassword = Utils::AllocAndCopyString((PCHAR)s.substr(pos + 1).c_str());
+		}
+		if(pReq->pHdr->command == CC_GET_FILE && pReq->cbExtra == 2) {
+			pReq->blkSize = bswap16(*(PUINT16)pReq->pbExtra);
 		}
 	}
 
-	return req;
+	return pReq;
 }
 
 FSPRequest* FSPRequest::Create(BYTE cmd, PBYTE pbData, UINT16 cbData, PBYTE pbExtra, UINT16 cbExtra, UINT16 pos, UINT16 seq) {
-	FSPRequest* req = new FSPRequest();
+	FSPRequest* pReq = new FSPRequest();
 
-	FSP_HDR hdr;
-	memset(&hdr, 0, sizeof(FSP_HDR));
+	PFSP_HDR pHdr = new FSP_HDR();
 
-	hdr.command = cmd;
+	pHdr->command = cmd;
 	if(Globals::FSP_KEY == 0)
-		hdr.key = randint(0x1000, 0xFFFF);
+		pHdr->key = randint(0x1000, 0xFFFF);
 	else
-		hdr.key = Globals::FSP_KEY;
-	hdr.sequence = seq;
-	hdr.length = cbData;
-	hdr.position = pos;
-	hdr.checksum = 0;
+		pHdr->key = Globals::FSP_KEY;
+	pHdr->sequence = seq;
+	pHdr->length = cbData;
+	pHdr->position = pos;
+	pHdr->checksum = 0;
 
-	req->pHdr = (PFSP_HDR)Utils::AllocAndCopy(&hdr, sizeof(FSP_HDR));
+	pReq->pHdr = (PFSP_HDR)Utils::AllocAndCopy(pHdr, sizeof(FSP_HDR));
 	if(pbData != NULL && cbData > 0) {
-		req->pbData = (PBYTE)Utils::AllocAndCopy(pbData, cbData);
-		req->cbData = cbData;
+		pReq->pbData = (PBYTE)Utils::AllocAndCopy(pbData, cbData);
+		pReq->cbData = cbData;
 	}
 	if(pbExtra != NULL && cbExtra > 0) {
-		req->pbExtra = (PBYTE)Utils::AllocAndCopy(pbExtra, cbExtra);
-		req->cbExtra = cbExtra;
+		pReq->pbExtra = (PBYTE)Utils::AllocAndCopy(pbExtra, cbExtra);
+		pReq->cbExtra = cbExtra;
 	}
 
 	if(Globals::FSP_KEY == 0)
-		Globals::FSP_KEY = hdr.key;
+		Globals::FSP_KEY = pHdr->key;
+	delete pHdr;
 
-	return req;
+	return pReq;
 }
