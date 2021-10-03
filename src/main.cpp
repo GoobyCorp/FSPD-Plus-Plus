@@ -253,6 +253,7 @@ int main(int argc, char* argv[]) {
 		// check bounds
 		if(!(n > 0 && n <= FSP_MAXSPACE)) {
 			perror("receive size out of bounds!\n");
+			free(pbRcvData);
 			return ERROR_SIZE_OUT_OF_BOUNDS;
 		}
 

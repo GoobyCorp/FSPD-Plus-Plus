@@ -240,7 +240,7 @@ FSPRequest* FSPRequest::Create(BYTE cmd, PBYTE pbData, UINT16 cbData, PBYTE pbEx
 
 	pHdr->command = cmd;
 	if(Globals::FSP_KEY == 0)
-		pHdr->key = randint(0x1000, 0xFFFF);
+		pHdr->key = randint(0x1111, 0xFFFF);
 	else
 		pHdr->key = Globals::FSP_KEY;
 	pHdr->sequence = seq;
