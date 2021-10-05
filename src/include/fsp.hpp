@@ -51,6 +51,7 @@ class FSPRequest {
         ~FSPRequest();
         UINT32 GetSize();
         PFSP_ALLOC Pack();
+        VOID PackAndSend(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen);
         // functions - static
         static FSPRequest* Parse(PBYTE pbData, UINT32 cbData);
         static FSPRequest* Create(BYTE cmd, PBYTE pbData, UINT16 cbData, PBYTE pbExtra, UINT16 cbExtra, UINT16 pos = 0, UINT16 seq = 0);

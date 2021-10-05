@@ -31,7 +31,7 @@ PFSP_ALLOC RDIRENT::Pack() {
 	pbTmp += sizeof(BYTE);
 	cbOut += (sizeof(UINT32) * 2) + sizeof(BYTE);
 	Utils::SwapRDIRENTHeaderEndian((PRDIRENT_HDR)pbOut); // to big endian
-	if(this->pcFileName != NULL) {
+	if(this->pcFileName != NULL && strlen(this->pcFileName) > 0) {
 		strcpy((PCHAR)pbTmp, this->pcFileName);
 		pbTmp += strlen(this->pcFileName) + 1;
 		cbOut += strlen(this->pcFileName) + 1;
@@ -263,4 +263,14 @@ FSPRequest* FSPRequest::Create(BYTE cmd, PBYTE pbData, UINT16 cbData, PBYTE pbEx
 	delete pHdr;
 
 	return pReq;
+}
+
+VOID FSPRequest::PackAndSend(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen) {
+	int n;
+	PFSP_ALLOC pAlloc = this->Pack();
+	if((n = sendto(srvSock, pAlloc->pbData, pAlloc->cbData, 0, cliAddr, cliAddrLen)) == -1) {
+
+	}
+	free(pAlloc->pbData);
+	delete pAlloc;
 }

@@ -16,6 +16,7 @@ class Utils {
         static VOID CopyToVector(vector<BYTE>* pbVec, PBYTE pbData, UINT32 cbData);
         static VOID ClearVector(vector<vector<BYTE>>* pbVec);
         static PCHAR StripDirSep(PCHAR path);
+        static fs::path RebasePath(PCHAR path);
         static VOID SwapFSPHeaderEndian(PFSP_HDR pHdr);
         static VOID SwapRDIRENTHeaderEndian(PRDIRENT_HDR pHdr);
         static VOID SwapSTATHeaderEndian(PSTAT_HDR pHdr);

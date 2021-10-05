@@ -57,10 +57,7 @@ BYTE Utils::CalcServerToClientChecksum(PBYTE data, UINT32 size) {
 }
 
 UINT32 Utils::CalcPadSize(UINT32 size, UINT32 boundary) {
-    if(size == boundary)
-        return 0;
-    else
-        return (boundary - size % boundary);
+    return size % boundary;
 }
 
 BOOL Utils::IsDir(PCHAR path) {
@@ -99,6 +96,17 @@ VOID Utils::ClearVector(vector<vector<BYTE>>* pbVec) {
 PCHAR Utils::StripDirSep(PCHAR path) {
     string s(path);
     return path + s.find_first_not_of('/');
+}
+
+fs::path Utils::RebasePath(PCHAR path) {
+    fs::path p(Globals::FSP_DIRECTORY);
+	p = fs::absolute(p);
+	// create server directory
+	if(!fs::exists(p))
+		fs::create_directory(Globals::FSP_DIRECTORY);
+	// append requested directory onto it
+	p /= Utils::StripDirSep(path);
+    return p;
 }
 
 VOID Utils::SwapFSPHeaderEndian(PFSP_HDR pHdr) {

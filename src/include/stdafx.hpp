@@ -21,6 +21,7 @@ using namespace std::experimental;
 // internal
 #include "bswap.hpp"
 #include "types.hpp"
+#include "memory.hpp"
 #include "globals.hpp"
 #include "cache.hpp"
 #include "utils.hpp"
