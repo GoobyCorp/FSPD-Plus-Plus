@@ -1,5 +1,5 @@
-#ifndef _MEMORY_HPP
-#define _MEMORY_HPP
+#pragma once
+
 class Alloc {
     public:
         PFSP_ALLOC pAlloc;
@@ -13,4 +13,3 @@ class Alloc {
         VOID CopyFrom(PVOID pvDstAddr, UINT32 size, UINT32 offset = 0);
         VOID Free();
 };
-#endif

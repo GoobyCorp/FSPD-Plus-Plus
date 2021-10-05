@@ -1,5 +1,5 @@
-#ifndef _UTILS_HPP
-#define _UTILS_HPP
+#pragma once
+
 class Utils {
     public:
         static ULONG AddressToLong(const PCHAR addr);
@@ -21,4 +21,3 @@ class Utils {
         static VOID SwapRDIRENTHeaderEndian(PRDIRENT_HDR pHdr);
         static VOID SwapSTATHeaderEndian(PSTAT_HDR pHdr);
 };
-#endif

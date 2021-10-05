@@ -1,5 +1,5 @@
-#ifndef _FSP_HPP
-#define _FSP_HPP
+#pragma once
+
 class RDIRENT {
     public:
         PRDIRENT_HDR pHdr = 0;
@@ -56,4 +56,3 @@ class FSPRequest {
         static FSPRequest* Parse(PBYTE pbData, UINT32 cbData);
         static FSPRequest* Create(BYTE cmd, PBYTE pbData, UINT16 cbData, PBYTE pbExtra, UINT16 cbExtra, UINT16 pos = 0, UINT16 seq = 0);
 };
-#endif

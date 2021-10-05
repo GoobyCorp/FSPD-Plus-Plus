@@ -1,5 +1,4 @@
-#ifndef _TYPES_HPP
-#define _TYPES_HPP
+#pragma once
 
 // defines
 #define es16(x) x = bswap16(x)
@@ -114,4 +113,3 @@ typedef FSP_ALLOC*  PFSP_ALLOC;
 #define IP_ADDR_MAX_LEN 16
 #define TRUE 1
 #define FALSE 0
-#endif
