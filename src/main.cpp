@@ -28,9 +28,8 @@ VOID HandleGetDir(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen, FSPReque
 			vector<BYTE> ent;
 			if(fs::is_directory(entry.path()) || fs::is_regular_file(entry.path())) {
 				RDIRENT* pEnt = RDIRENT::Create((PCHAR)entry.path().c_str());
-				PFSP_ALLOC pAlloc = pEnt->Pack();
-				Utils::CopyToVector(&ent, pAlloc->pbData, pAlloc->cbData);
-				free(pAlloc->pbData);
+				Alloc* pAlloc = pEnt->Pack();
+				Utils::CopyToVector(&ent, (PBYTE)pAlloc->GetAddr(), pAlloc->GetSize());
 				delete pAlloc;
 				delete pEnt;
 				ents.push_back(ent);
@@ -40,10 +39,9 @@ VOID HandleGetDir(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen, FSPReque
 		// create end
 		vector<BYTE> ent;
 		RDIRENT* pEnt = RDIRENT::CreateEnd();
-		PFSP_ALLOC pAlloc = pEnt->Pack();
-		Utils::CopyToVector(&ent, pAlloc->pbData, pAlloc->cbData);
+		Alloc* pAlloc = pEnt->Pack();
+		Utils::CopyToVector(&ent, (PBYTE)pAlloc->GetAddr(), pAlloc->GetSize());
 		ents.push_back(ent);
-		free(pAlloc->pbData);
 		delete pAlloc;
 
 		// loop through each entry and create a packet
@@ -61,9 +59,8 @@ VOID HandleGetDir(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen, FSPReque
 						// nothing
 					} else {
 						RDIRENT* pEnt = RDIRENT::CreateSkip();
-						PFSP_ALLOC pAlloc = pEnt->Pack();
-						Utils::CopyToVector(&ent, pAlloc->pbData, pAlloc->cbData);
-						free(pAlloc->pbData);
+						Alloc* pAlloc = pEnt->Pack();
+						Utils::CopyToVector(&ent, (PBYTE)pAlloc->GetAddr(), pAlloc->GetSize());
 						delete pAlloc;
 						delete pEnt;
 					}
@@ -93,6 +90,7 @@ VOID HandleGetDir(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen, FSPReque
 		int n;
 		FSPRequest* pSndReq = FSPRequest::Create(pReq->pHdr->command, (Cache::PktQueue[pktNum].data() + pktOff), (Cache::PktQueue[pktNum].size() - pktOff), NULL, 0, pReq->pHdr->position, pReq->pHdr->sequence);
 		pSndReq->PackAndSend(srvSock, cliAddr, cliAddrLen);
+		
 		delete pSndReq;
 
 		// clear cache since we've sent all the packets
@@ -136,13 +134,12 @@ VOID HandleStat(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen, FSPRequest
 	fs::path p = Utils::RebasePath(pReq->pcFilename);
 
 	STAT* pStat = STAT::Create((PCHAR)p.c_str());
-	PFSP_ALLOC pAllocS = pStat->Pack();
+	Alloc* pAllocS = pStat->Pack();
 
-	FSPRequest* pSndReq = FSPRequest::Create(pReq->pHdr->command, pAllocS->pbData, pAllocS->cbData, NULL, 0, pReq->pHdr->position, pReq->pHdr->sequence);
+	FSPRequest* pSndReq = FSPRequest::Create(pReq->pHdr->command, (PBYTE)pAllocS->GetAddr(), pAllocS->GetSize(), NULL, 0, pReq->pHdr->position, pReq->pHdr->sequence);
 	pSndReq->PackAndSend(srvSock, cliAddr, cliAddrLen);
 
 	// cleanup
-	free(pAllocS->pbData);
 	delete pAllocS;
 	delete pSndReq;
 }

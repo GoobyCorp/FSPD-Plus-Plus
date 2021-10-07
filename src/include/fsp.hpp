@@ -9,7 +9,8 @@ class RDIRENT {
         RDIRENT();
         ~RDIRENT();
         UINT32 GetSize();
-        PFSP_ALLOC Pack();
+        Alloc* Pack();
+        VOID Free();
         // functions - static
         static RDIRENT* Create(PCHAR path);
         static RDIRENT* CreateSkip();
@@ -24,7 +25,8 @@ class STAT {
         STAT();
         ~STAT();
         UINT32 GetSize();
-        PFSP_ALLOC Pack();
+        Alloc* Pack();
+        VOID Free();
         // functions - static
         static STAT* Create(PCHAR path);
 };
@@ -50,8 +52,9 @@ class FSPRequest {
         FSPRequest();
         ~FSPRequest();
         UINT32 GetSize();
-        PFSP_ALLOC Pack();
+        Alloc* Pack();
         VOID PackAndSend(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen);
+        VOID Free();
         // functions - static
         static FSPRequest* Parse(PBYTE pbData, UINT32 cbData);
         static FSPRequest* Create(BYTE cmd, PBYTE pbData, UINT16 cbData, PBYTE pbExtra, UINT16 cbExtra, UINT16 pos = 0, UINT16 seq = 0);

@@ -1,14 +1,21 @@
 #include "stdafx.hpp"
 
-Alloc::Alloc(UINT32 size) {
+// create new allocation
+Alloc::Alloc(UINT32 cbSize) {
     this->pAlloc = new FSP_ALLOC();
-    this->pAlloc->pbData = (PBYTE)calloc(1, size);
-    this->pAlloc->cbData = size;
+    this->pAlloc->pbData = (PBYTE)calloc(1, cbSize);
+    this->pAlloc->cbData = cbSize;
+}
+
+// use preallocated memory
+Alloc::Alloc(PBYTE pbData, UINT32 cbSize) {
+    this->pAlloc = new FSP_ALLOC();
+    this->pAlloc->pbData = pbData;
+    this->pAlloc->cbData = cbSize;
 }
 
 Alloc::~Alloc() {
     this->Free();
-    delete this->pAlloc;
 }
 
 PVOID Alloc::GetAddr() {
@@ -24,14 +31,15 @@ VOID Alloc::Realloc(UINT32 size) {
     this->pAlloc->cbData = size;
 }
 
-VOID Alloc::CopyTo(PVOID pvSrcAddr, UINT32 size, UINT32 offset) {
-    memcpy(this->pAlloc->pbData + offset, pvSrcAddr, size);
+VOID Alloc::CopyTo(PVOID pvSrcAddr, UINT32 size, UINT32 dstOffs) {
+    memcpy(this->pAlloc->pbData + dstOffs, pvSrcAddr, size);
 }
 
-VOID Alloc::CopyFrom(PVOID pvDstAddr, UINT32 size, UINT32 offset) {
-    memcpy(pvDstAddr, this->pAlloc->pbData + offset, size);
+VOID Alloc::CopyFrom(PVOID pvDstAddr, UINT32 size, UINT32 srcOffs) {
+    memcpy(pvDstAddr, this->pAlloc->pbData + srcOffs, size);
 }
 
 VOID Alloc::Free() {
     free(this->pAlloc->pbData);
+    delete this->pAlloc;
 }

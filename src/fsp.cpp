@@ -5,21 +5,17 @@ RDIRENT::RDIRENT() {
 }
 
 RDIRENT::~RDIRENT() {
-	if(this->pHdr != NULL)
-		free(this->pHdr);
-	if(this->pcFileName != NULL)
-		free(this->pcFileName);
-	this->pHdr = 0;
-	this->pcFileName = 0;
+	this->Free();
 }
 
 UINT32 RDIRENT::GetSize() {
-	PFSP_ALLOC pPck = this->Pack();
-	free(pPck->pbData);  // quite a waste but whatever...
-	return pPck->cbData;
+	Alloc* pAlloc = this->Pack();
+	UINT32 size = pAlloc->GetSize();
+	delete pAlloc;
+	return size;
 }
 
-PFSP_ALLOC RDIRENT::Pack() {
+Alloc* RDIRENT::Pack() {
 	UINT32 cbOut = 0;
 	PBYTE pbOut = (PBYTE)calloc(1, FSP_SPACE);
 	PBYTE pbTmp = pbOut;
@@ -40,9 +36,7 @@ PFSP_ALLOC RDIRENT::Pack() {
 	memset(pbTmp, 0, padSize);
 	cbOut += padSize;
 	pbOut = (PBYTE)realloc(pbOut, cbOut);
-	PFSP_ALLOC pAlloc = new FSP_ALLOC();
-	pAlloc->pbData = pbOut;
-	pAlloc->cbData = cbOut;
+	Alloc* pAlloc = new Alloc(pbOut, cbOut);
 	return pAlloc;
 }
 
@@ -86,23 +80,28 @@ RDIRENT* RDIRENT::CreateEnd() {
 	return pEnt;
 }
 
+VOID RDIRENT::Free() {
+	if(this->pHdr != NULL)
+		free(this->pHdr);
+	if(this->pcFileName != NULL)
+		free(this->pcFileName);
+	this->pHdr = 0;
+	this->pcFileName = 0;
+}
+
 STAT::STAT() {
 
 }
 
 STAT::~STAT() {
-	if(this->pHdr != NULL)
-		free(this->pHdr);
-	this->pHdr = 0;
+	this->Free();
 }
 
 UINT32 STAT::GetSize() {
-	PFSP_ALLOC pPck = this->Pack();
-	free(pPck->pbData);  // quite a waste but whatever...
-	return pPck->cbData;
+	return sizeof(STAT_HDR);
 }
 
-PFSP_ALLOC STAT::Pack() {
+Alloc* STAT::Pack() {
 	UINT32 cbOut = 0;
 	PBYTE pbOut = (PBYTE)calloc(1, FSP_SPACE);
 	PBYTE pbTmp = pbOut;
@@ -115,9 +114,7 @@ PFSP_ALLOC STAT::Pack() {
 	cbOut += (sizeof(UINT32) * 2) + sizeof(BYTE);
 	Utils::SwapSTATHeaderEndian((PSTAT_HDR)pbOut); // to big endian
 	pbOut = (PBYTE)realloc(pbOut, cbOut);
-	PFSP_ALLOC pAlloc = new FSP_ALLOC();
-	pAlloc->pbData = pbOut;
-	pAlloc->cbData = cbOut;
+	Alloc* pAlloc = new Alloc(pbOut, cbOut);
 	return pAlloc;
 }
 
@@ -140,36 +137,25 @@ STAT* STAT::Create(PCHAR path) {
 	return pEnt;
 }
 
+VOID STAT::Free() {
+	if(this->pHdr != NULL)
+		free(this->pHdr);
+	this->pHdr = 0;
+}
+
 FSPRequest::FSPRequest() {
 
 }
 
 FSPRequest::~FSPRequest() {
-	if(this->pHdr != NULL)
-		free(this->pHdr);
-	if(this->pbData != NULL)
-	    free(this->pbData);
-	if(this->pbExtra != NULL)
-		free(this->pbExtra);
-	if(this->pcDirectory != NULL)
-		free(this->pcDirectory);
-	if(this->pcFilename != NULL)
-		free(this->pcFilename);
-	if(this->pcPassword != NULL)
-		free(this->pcPassword);
-	this->pHdr = 0;
-	this->pbData = 0;
-	this->pbExtra = 0;
-	this->pcDirectory = 0;
-	this->pcFilename = 0;
-	this->pcPassword = 0;
+	this->Free();
 }
 
 UINT32 FSPRequest::GetSize() {
 	return sizeof(FSP_HDR) + this->cbData + this->cbExtra;
 }
 
-PFSP_ALLOC FSPRequest::Pack() {
+Alloc* FSPRequest::Pack() {
 	PBYTE pbOut = (PBYTE)calloc(1, FSP_MAXSPACE);
 	memcpy(pbOut, this->pHdr, sizeof(FSP_HDR));
 	Utils::SwapFSPHeaderEndian((PFSP_HDR)pbOut);  // to big endian
@@ -180,9 +166,7 @@ PFSP_ALLOC FSPRequest::Pack() {
 	int cbOut = this->GetSize();
 	pbOut = (PBYTE)realloc(pbOut, cbOut);
 	pbOut[OFFS_CKSM] = Utils::CalcServerToClientChecksum(pbOut, cbOut);
-	PFSP_ALLOC pAlloc = new FSP_ALLOC();
-	pAlloc->pbData = pbOut;
-	pAlloc->cbData = cbOut;
+	Alloc* pAlloc = new Alloc(pbOut, cbOut);
 	return pAlloc;
 }
 
@@ -267,10 +251,30 @@ FSPRequest* FSPRequest::Create(BYTE cmd, PBYTE pbData, UINT16 cbData, PBYTE pbEx
 
 VOID FSPRequest::PackAndSend(int srvSock, sockaddr* cliAddr, socklen_t cliAddrLen) {
 	int n;
-	PFSP_ALLOC pAlloc = this->Pack();
-	if((n = sendto(srvSock, pAlloc->pbData, pAlloc->cbData, 0, cliAddr, cliAddrLen)) == -1) {
+	Alloc* pAlloc = this->Pack();
+	if((n = sendto(srvSock, pAlloc->GetAddr(), pAlloc->GetSize(), 0, cliAddr, cliAddrLen)) == -1) {
 
 	}
-	free(pAlloc->pbData);
 	delete pAlloc;
+}
+
+VOID FSPRequest::Free() {
+	if(this->pHdr != NULL)
+		free(this->pHdr);
+	if(this->pbData != NULL)
+	    free(this->pbData);
+	if(this->pbExtra != NULL)
+		free(this->pbExtra);
+	if(this->pcDirectory != NULL)
+		free(this->pcDirectory);
+	if(this->pcFilename != NULL)
+		free(this->pcFilename);
+	if(this->pcPassword != NULL)
+		free(this->pcPassword);
+	this->pHdr = 0;
+	this->pbData = 0;
+	this->pbExtra = 0;
+	this->pcDirectory = 0;
+	this->pcFilename = 0;
+	this->pcPassword = 0;
 }
